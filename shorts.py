@@ -1,11 +1,12 @@
-# Import everything
 from dotenv import load_dotenv
 import random
 import os
-import openai
+import requests
 from gtts import gTTS
 from moviepy.editor import *
 import moviepy.video.fx.crop as crop_vid
+
+# Load environment variables
 load_dotenv()
 
 # Ask for video info
@@ -13,32 +14,40 @@ title = input("\nEnter the name of the video >  ")
 option = input('Do you want AI to generate content? (yes/no) >  ')
 
 if option == 'yes':
-    # Generate content using OpenAI API
+    # Generate content using Gemini AI API
     theme = input("\nEnter the theme of the video >  ")
 
     ### MAKE .env FILE AND SAVE YOUR API KEY ###
-    openai.api_key = os.environ["OPENAI_API"]
-    response = openai.Completion.create(
-        engine="gpt-3.5-turbo-instruct",
-        prompt=f"Act as an script writer who writes engaging and professional scripts for tiktok shorts. you never do a grammatical mistake and write very engaging scripts that touches the viewers' attention. At the beginning of the video you never forget to add a viral hook that will catch the viewers attention and will break the scroll. Your scripts are so loved by users that they subscribe and follow the channel. Don't mention any channel's name but at appropriate point tell the viewer to like the video and follow or subscribe the channel or account. (Remember tiktok shorts have max limit of 1 min). Now Generate content on - \"{theme}\"",
-        temperature=0.7,
-        max_tokens=200,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    print(response.choices[0].text)
+    gemini_api_key = os.environ["GEMINI_API"]
+    url = "https://api.gemini.ai/v1/generate-script"  # Example URL; replace with the actual Gemini API URL
+    headers = {
+        "Authorization": f"Bearer {gemini_api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "prompt": f"Act as a script writer who writes engaging and professional scripts for TikTok shorts. Your scripts include a viral hook, are error-free, and prompt viewers to like and follow without mentioning any channel name. Generate content on - \"{theme}\"",
+        "max_length": 200
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    
+    if response.status_code == 200:
+        content = response.json().get('content', '')
+        print(content)
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        exit()
 
     yes_no = input('\nIs this fine? (yes/no) >  ')
     if yes_no == 'yes':
-        content = response.choices[0].text
+        content = content
     else:
         content = input('\nEnter >  ')
 else:
     content = input('\nEnter the content of the video >  ')
 
 # Create the directory
-if os.path.exists('generated') == False:
+if not os.path.exists('generated'):
     os.mkdir('generated')
 
 # Generate speech for the video
@@ -49,7 +58,7 @@ gp = random.choice(["1", "2"])
 start_point = random.randint(1, 480)
 audio_clip = AudioFileClip("generated/speech.mp3")
 
-if (audio_clip.duration + 1.3 > 58):
+if audio_clip.duration + 1.3 > 58:
     print('\nSpeech too long!\n' + str(audio_clip.duration) + ' seconds\n' + str(audio_clip.duration + 1.3) + ' total')
     exit()
 
